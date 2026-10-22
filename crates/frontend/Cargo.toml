@@ -1,0 +1,18 @@
+[package]
+name = "frontend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+improviser = { path = "../improviser" }
+context = { path = "../context" }
+tts = { path = "../tts" }
+toml = "1.1.8"
+serde = { version = "1", features = ["derive"] }
+eframe = { version = "0.37", default-features = false, features = [
+    "glow",
+    "wayland",
+    "x11",
+    "default_fonts",
+] }
+hotkeys = { path = "../hotkeys" }
