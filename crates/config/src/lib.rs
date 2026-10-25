@@ -36,7 +36,7 @@ pub enum ConfigError {
     Io(io::Error),
     Parse(toml::de::Error),
     Section { path: &'static str, source: toml::de::Error },
-    Serialize { path: &'static str, source: toml::ser::Error },
+    Serialize { path: String, source: toml::ser::Error },
     /// A parent key on the path exists but is not a table.
     Conflict(String),
 }
@@ -134,11 +134,17 @@ impl Config {
         Ok(())
     }
     
-    /// Updates the in-memory config only. Call `save` to persist.
-    pub fn store<T: ConfigSection>(&mut self, value: &T) -> Result<(), ConfigError> {
+    /// Serializes `value` and stores it at a dotted path, creating parent tables as needed.
+    /// In-memory only; call `save` to persist.
+    pub fn set<T: Serialize + ?Sized>(&mut self, path: &str, value: &T) -> Result<(), ConfigError> {
         let v = toml::Value::try_from(value)
-            .map_err(|source| ConfigError::Serialize { path: T::PATH, source })?;
-        self.set_value(T::PATH, v)
+            .map_err(|source| ConfigError::Serialize { path: path.into(), source })?;
+        self.set_value(path, v)
+    }
+
+    /// `store` becomes a thin wrapper, so the path-walking code exists once.
+    pub fn store<T: ConfigSection>(&mut self, value: &T) -> Result<(), ConfigError> {
+        self.set(T::PATH, value)
     }
 
 
@@ -147,7 +153,7 @@ impl Config {
     /// since it may hold an API key.
     pub fn save(&self, path: &Path) -> Result<(), ConfigError> {
         let text = toml::to_string_pretty(&self.root)
-            .map_err(|source| ConfigError::Serialize { path: "(root)", source })?;
+            .map_err(|source| ConfigError::Serialize { path: "(root)".into(), source })?;
         if let Some(dir) = path.parent() {
             fs::create_dir_all(dir)?;
         }

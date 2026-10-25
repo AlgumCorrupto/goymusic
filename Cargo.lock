@@ -1292,6 +1292,7 @@ name = "hotkeys"
 version = "0.1.0"
 dependencies = [
  "ashpd",
+ "config",
  "futures-util",
  "global-hotkey",
  "tokio",

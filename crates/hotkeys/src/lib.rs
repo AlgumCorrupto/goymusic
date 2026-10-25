@@ -22,6 +22,22 @@ pub struct Modifiers {
     pub meta: bool,
 }
 
+use config::serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
+use config::{Config, Configurable};
+
+impl Serialize for Hotkey {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.collect_str(self) // "Ctrl+Shift+F5"
+    }
+}
+
+impl<'de> Deserialize<'de> for Hotkey {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        s.parse().map_err(D::Error::custom)
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Key {
     Char(char), // lowercase 'a'..='z' or '0'..='9'
@@ -36,6 +52,58 @@ pub enum Key {
 pub struct Hotkey {
     pub mods: Modifiers,
     pub key: Key,
+}
+
+pub trait HotkeyAction: Copy + PartialEq + Send + 'static {
+    fn all() -> &'static [Self];
+    fn id(&self) -> &'static str;           // key in [hotkeys], and the portal shortcut id
+    fn description(&self) -> &'static str;  // shown in KDE's shortcut settings
+    fn default_trigger(&self) -> Hotkey;
+}
+
+pub struct Bindings<A: HotkeyAction> {
+    triggers: Vec<(A, Hotkey)>,
+}
+
+impl<A: HotkeyAction> Bindings<A> {
+    pub fn get(&self, action: A) -> Hotkey {
+        self.triggers.iter().find(|(a, _)| *a == action).map(|(_, h)| *h)
+            .unwrap_or_else(|| action.default_trigger())
+    }
+
+    pub fn set(&mut self, action: A, key: Hotkey) {
+        match self.triggers.iter_mut().find(|(a, _)| *a == action) {
+            Some(slot) => slot.1 = key,
+            None => self.triggers.push((action, key)),
+        }
+    }
+
+    fn list(&self) -> Vec<Binding<A>> {
+        self.triggers.iter()
+            .map(|&(a, trigger)| Binding { action: a, id: a.id(), description: a.description(), trigger })
+            .collect()
+    }
+}
+
+impl<A: HotkeyAction> Configurable for Bindings<A> {
+    fn load(config: &Config) -> Self {
+        let triggers = A::all().iter()
+            .map(|&a| {
+                let key = config.get::<Hotkey>(&format!("hotkeys.{}", a.id()))
+                    .unwrap_or_else(|| a.default_trigger()); // missing or unparsable: default
+                (a, key)
+            })
+            .collect();
+        Self { triggers }
+    }
+
+    fn store(&self, config: &mut Config) {
+        for (a, key) in &self.triggers {
+            if let Err(e) = config.set(&format!("hotkeys.{}", a.id()), key) {
+                eprintln!("config: [hotkeys].{}: {e}", a.id());
+            }
+        }
+    }
 }
 
 impl FromStr for Hotkey {
@@ -119,14 +187,13 @@ impl<A> GlobalHotkeys<A> for DummyHotkeys {
 /// Picks a backend: the portal on Wayland, `global-hotkey` elsewhere,
 /// the dummy if nothing works.
 #[allow(unused_variables)]
-pub fn connect<A: Copy + Send + 'static>(
-    bindings: &[Binding<A>],
-    wake: Wake,
-) -> Box<dyn GlobalHotkeys<A>> {
+pub fn connect<A: HotkeyAction>(bindings: &Bindings<A>, wake: Wake) -> Box<dyn GlobalHotkeys<A>> {
+    let list = bindings.list();
+
     #[cfg(all(feature = "portal", target_os = "linux"))]
     if std::env::var_os("WAYLAND_DISPLAY").is_some() {
         // global-hotkey can't work on Wayland, so don't fall back to it here.
-        return match PortalHotkeys::new(bindings, wake) {
+        return match PortalHotkeys::new(&list, wake) {
             Ok(p) => Box::new(p),
             Err(e) => {
                 eprintln!("hotkeys: portal unavailable: {e}");
@@ -136,7 +203,7 @@ pub fn connect<A: Copy + Send + 'static>(
     }
 
     #[cfg(feature = "native")]
-    match NativeHotkeys::new(bindings, wake) {
+    match NativeHotkeys::new(&list, wake) {
         Ok(n) => return Box::new(n),
         Err(e) => eprintln!("hotkeys: native backend unavailable: {e}"),
     }

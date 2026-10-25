@@ -1,3 +1,4 @@
+use config::Configurable;
 use eframe::egui::{self, ViewportBuilder, ViewportClass, ViewportCommand, ViewportId};
 use std::{collections::BTreeMap, sync::Arc, time::{Duration, Instant}};
 use context::data::Context as AppContext;
@@ -5,7 +6,7 @@ use crate::constants::{MAX_CATCH_UP, TICK};
 
 use crate::screens::quick_tts::QuickTtsScreen;
 
-use hotkeys::{Binding, GlobalHotkeys, connect};
+use hotkeys::{GlobalHotkeys, connect};
 
 pub trait Screen {
     fn render(&mut self, ui: &mut egui::Ui, window: &mut Window, frontend: &mut Frontend);
@@ -89,8 +90,17 @@ impl Window {
     }
 }
 
-#[derive(Clone, Copy)]
+use hotkeys::{Bindings, Hotkey, HotkeyAction};
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum Action { QuickTts }
+
+impl HotkeyAction for Action {
+    fn all() -> &'static [Self] { &[Action::QuickTts] }
+    fn id(&self) -> &'static str { match self { Action::QuickTts => "quick-tts" } }
+    fn description(&self) -> &'static str { match self { Action::QuickTts => "Open quick TTS prompt" } }
+    fn default_trigger(&self) -> Hotkey { match self { Action::QuickTts => "Alt+T".parse().unwrap() } }
+}
 
 #[derive(Clone)]
 pub struct WindowStyle {
@@ -125,15 +135,8 @@ impl Frontend {
         // field: hotkeys: Box<dyn GlobalHotkeys<Action>>
 
         let ctx = cc.egui_ctx.clone();
-        let hotkeys = connect(
-            &[Binding {
-                action: Action::QuickTts,
-                id: "quick-tts",
-                description: "Open quick TTS prompt",
-                trigger: "Alt+T".parse().unwrap(), // later: read from customs.toml
-            }],
-            Arc::new(move || ctx.request_repaint()),
-        );
+        let bindings = Bindings::<Action>::load(app_context.config());
+        let hotkeys = connect(&bindings, Arc::new(move || ctx.request_repaint()));
 
         eprintln!("global hotkeys: {}", hotkeys.backend_name());
         Self {
