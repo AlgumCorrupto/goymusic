@@ -1,0 +1,81 @@
+[tts.fish]
+api_key = ""
+model = "s2.1-pro-free"
+voice = "Alex Jones"   # a `name` from the list below
+
+# browse https://fish.audio/app/playground/ voices, and copy reference_id from the request
+[tts.fish.references]
+"Dagoth Ur" = "a3ac8f70fc1b4880812b5a48748c5f7c"
+"Pigeon ASMR" = "424d78b883cc4a068df24ab425fd1e18"
+"Van Darkholme" = "ac3e2eee47a1414d8e705613f7e5aca7"
+"Sponge Bob" = "deb5d2b89e3247918d4937d9c0864cca"
+"Chief Keef" = "28adaaaee1f44a0785b9880938b041b4"
+"Indian" = "71e5c1d4909b4c10b0fcd3194331ad58"
+"Postal Dude" = "bc7d31c3fddd4d06b7bc8b2962d50982"
+"DJ Smokey" = "8a2f5be9b42f49f0871b2f62c68ff6bb"
+"OG Loc" = "e160a42a23734ca8bd5f7b8d68be4f3f"
+"Peter Griffin" = "b1d36a18f8d84bd59dead30474cbe3d7"
+"Donald J Trump" = "4d5fa13d58824062a669e37665626dba"
+"Alex Jones" = "d596396ca9e14998bd3b6a0d3f69e707"
+
+# Scales: 12 values, one per semitone from the root (true = in the scale).
+[improviser.selections.scales]
+"Ionian" = [true, false, true, false, true, true, false, true, false, true, false, true]
+"Dorian" = [true, false, true, true, false, true, false, true, false, true, true, false]
+"Phrygian" = [true, true, false, true, false, true, false, true, true, false, true, false]
+"Lydian" = [true, false, true, false, true, false, true, true, false, true, false, true]
+"Mixolydian" = [true, false, true, false, true, true, false, true, false, true, true, false]
+"Aeolian" = [true, false, true, true, false, true, false, true, true, false, true, false]
+"Locrian" = [true, true, false, true, false, true, true, false, true, false, true, false]
+"Chromatic" = [true, true, true, true, true, true, true, true, true, true, true, true]
+"Major Pentatonic" = [true, false, true, false, true, false, false, true, false, true, false, false]
+"Minor Pentatonic" = [true, false, false, true, false, true, false, true, false, false, true, false]
+"Egyptian" = [true, false, true, false, false, true, false, true, false, false, true, false]
+"Blues Minor Pentatonic" = [true, false, false, true, false, true, false, false, true, false, true, false]
+"Blues Major Pentatonic" = [true, false, true, false, false, true, false, true, false, true, false, false]
+"Blues" = [true, false, false, true, false, true, true, true, false, false, true, false]
+"Major Blues" = [true, false, true, true, true, false, false, true, false, true, false, false]
+"Arp: Maj7" = [true, false, false, false, true, false, false, true, false, false, false, true]
+"Arp: Min7" = [true, false, false, true, false, false, false, true, false, false, true, false]
+"Arp: Dom7" = [true, false, false, false, true, false, false, true, false, false, true, false]
+"Arp: Sus2" = [true, false, true, false, false, false, false, true, false, false, false, false]
+"Arp: Sus4" = [true, false, false, false, false, true, false, true, false, false, false, false]
+"Arp: 7sus4" = [true, false, false, false, false, true, false, true, false, false, true, false]
+
+# Extra scales
+"Whole Tone" = [true, false, true, false, true, false, true, false, true, false, true, false]
+"Lydian Augmented" = [true, false, true, false, true, false, true, false, true, true, false, true]
+"Melodic Minor" = [true, false, true, true, false, true, false, true, false, true, false, true]
+"Harmonic Minor" = [true, false, true, true, false, true, false, true, true, false, false, true]
+"Dominant Diminished" = [true, true, false, true, true, false, true, true, false, true, true, false]
+
+[improviser.selections]
+min_bpm = 10.0
+max_bpm = 1000.0 # gulps
+
+# Note durations: length in beats (1.0 = quarter note).
+[improviser.selections.note_durations]
+"Whole" = 4.0
+"Half" = 2.0
+"Quarter" = 1.0
+"Straight 8th" = 0.5
+"Straight 16th" = 0.25
+"Straight 32nd" = 0.125
+"Triplet 8th" = 0.3333333333333333
+"Triplet 16th" = 0.16666666666666666
+"Quintuplet 8th" = 0.2
+"Quintuplet 16th" = 0.1
+
+[improviser.selections.notes]
+"C" = 0
+"C#" = 1
+"D" = 2
+"D#" = 3
+"E" = 4
+"F" = 5
+"F#" = 6
+"G" = 7
+"G#" = 8
+"A" = 9
+"A#" = 10
+"B" = 11

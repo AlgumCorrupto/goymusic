@@ -1,101 +1,23 @@
 use std::collections::HashMap;
-use std::error::Error;
-use std::fs;
-use std::path::Path;
 
-use serde::Deserialize;
-
-use improviser::constants::*;
+use config::Configurable;
+use context::config::config_section;
 
 use eframe::egui;
 
 use crate::framework::{Screen, Window, Frontend};
 
 #[derive(Default)]
+#[config_section("improviser.selections")]
 pub struct Selections {
     pub notes: HashMap<String, u8>,
     pub scales: HashMap<String, [bool; 12]>,
     pub note_durations: HashMap<String, f32>,
-}
-
-#[derive(Deserialize, Default)]
-#[serde(default)]
-struct CustomSelections {
-    scales: HashMap<String, [bool; 12]>,
-    note_durations: HashMap<String, f32>,
+    pub min_bpm: f32,
+    pub max_bpm: f32,
 }
 
 impl Selections {
-    pub fn new() -> Self {
-        let mut sel = Selections { scales: HashMap::new(), note_durations: HashMap::new(), notes: HashMap::new() };
-
-        sel.load_builtin();
-        if let Err(error) = sel.load_toml(Path::new("./customs.toml")) {
-            eprintln!("Failed to load customs.toml: {error}");
-        }
-
-        return sel;
-    }
-
-    fn load_builtin(&mut self) {
-        // scales
-        self.scales.insert(String::from("Ionian"), SCALE_IONIAN);
-        self.scales.insert(String::from("Dorian"), SCALE_DORIAN);
-        self.scales.insert(String::from("Mixolydian"), SCALE_MIXOLYDIAN);
-        self.scales.insert(String::from("Phrygian"), SCALE_PHRYGIAN);
-        self.scales.insert(String::from("Lydian"), SCALE_LYDIAN);
-        self.scales.insert(String::from("Aeolian"), SCALE_AEOLIAN);
-        self.scales.insert(String::from("Locrian"), SCALE_LOCRIAN);
-        self.scales.insert(String::from("Chromatic"), SCALE_CHROMATIC);
-        self.scales.insert(String::from("Major Pentatonic"), SCALE_PENTATONIC_MAJOR);
-        self.scales.insert(String::from("Minor Pentatonic"), SCALE_PENTATONIC_MINOR);
-        self.scales.insert(String::from("Egyptian"), SCALE_PENTATONIC_EGYPTIAN);
-        self.scales.insert(String::from("Blues Minor Pentatonic"), SCALE_PENTATONIC_BLUES_MINOR);
-        self.scales.insert(String::from("Blues Major Pentatonic"), SCALE_PENTATONIC_BLUES_MAJOR);
-        self.scales.insert(String::from("Blues"), SCALE_BLUES);
-        self.scales.insert(String::from("Major Blues"), SCALE_BLUES_MAJOR);
-        self.scales.insert(String::from("Arp: Maj7"), ARP_MAJ7);
-        self.scales.insert(String::from("Arp: Min7"), ARP_MIN7);
-        self.scales.insert(String::from("Arp: Dom7"), ARP_DOM7);
-        self.scales.insert(String::from("Arp: Sus2"), ARP_SUS2);
-        self.scales.insert(String::from("Arp: Sus4"), ARP_SUS4);
-        self.scales.insert(String::from("Arp: 7sus4"), ARP_7SUS4);
-
-        // note durations
-        self.note_durations.insert(String::from("Whole"), DURATION_WHOLE);
-        self.note_durations.insert(String::from("Half"), DURATION_HALF);
-        self.note_durations.insert(String::from("Quarter"), DURATION_QUARTER);
-        self.note_durations.insert(String::from("Straight 8th"), DURATION_8TH_STRAIGHT);
-        self.note_durations.insert(String::from("Straight 16th"), DURATION_16TH_STRAIGHT);
-        self.note_durations.insert(String::from("Straight 32th"), DURATION_32TH_STRAIGHT);
-        self.note_durations.insert(String::from("Triplet 8th"), DURATION_8TH_TRIPLET);
-        self.note_durations.insert(String::from("Triplet 16th"), DURATION_16TH_TRIPLET);
-
-        // note names
-        self.notes.insert(String::from("C"), 0);
-        self.notes.insert(String::from("C#"), 1);
-        self.notes.insert(String::from("D"), 2);
-        self.notes.insert(String::from("D#"), 3);
-        self.notes.insert(String::from("E"), 4);
-        self.notes.insert(String::from("F"), 5);
-        self.notes.insert(String::from("F#"), 6);
-        self.notes.insert(String::from("G"), 7);
-        self.notes.insert(String::from("G#"), 8);
-        self.notes.insert(String::from("A"), 9);
-        self.notes.insert(String::from("A#"), 10);
-        self.notes.insert(String::from("B"), 11);
-    }
-
-    fn load_toml(&mut self, path: &Path) -> Result<(), Box<dyn Error>> {
-        let contents = fs::read_to_string(path)?;
-        let custom: CustomSelections = toml::from_str(&contents)?;
-
-        self.scales.extend(custom.scales);
-        self.note_durations.extend(custom.note_durations);
-
-        Ok(())
-    }
-
     /// C, C#, D ... B
     pub fn sorted_notes(&self) -> Vec<(&String, &u8)> {
         let mut v: Vec<_> = self.notes.iter().collect();
@@ -145,8 +67,8 @@ pub struct ImproviserScreen {
 }
 
 impl ImproviserScreen {
-    pub fn new() -> Self {
-        Self { selections: Selections::new() }
+    pub fn new(frontend: &Frontend) -> Self {
+        Self { selections: Selections::load(frontend.app.config()) }
     }
 }
 
@@ -194,7 +116,7 @@ impl Screen for ImproviserScreen {
                 ui.label("Tempo");
                 ui.add(
                     egui::DragValue::new(&mut improv.tempo)
-                        .range(20.0..=300.0)
+                        .range(self.selections.min_bpm..=self.selections.max_bpm)
                         .speed(0.5)
                         .suffix(" bpm"),
                 );

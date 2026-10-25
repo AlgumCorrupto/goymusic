@@ -1,5 +1,9 @@
 use std::error::Error;
 use std::process::Command;
+use config::Configurable;
+
+use crate::synths::{load_params, store_params};
+
 use super::{Audio, ParamDesc, ParamKind, Synth, Value};
 
 #[derive(Clone)]
@@ -33,8 +37,23 @@ fn list_voices() -> Vec<String> {
         .collect()
 }
 
+impl Configurable for EspeakSynth {
+    fn load(config: &config::Config) -> Self
+    where
+        Self: Sized {
+        let mut s = Self::default();
+        load_params(&mut s, config);
+        s
+    }
+
+    fn store(&self, config: &mut config::Config) {
+        store_params(self, config);
+    }
+}
+
 impl Synth for EspeakSynth {
     fn name(&self) -> &str { "eSpeak NG" }
+    fn short_name(&self) -> &str { "espeak" }
 
     fn params(&self) -> Vec<ParamDesc> {
         vec![

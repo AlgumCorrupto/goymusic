@@ -7,3 +7,4 @@ edition = "2024"
 hound = "3.5.1"
 serde_json = "1.0.154"
 ureq = { version = "2", features = ["json"] }
+config = { path = "../config" }

@@ -8,3 +8,4 @@ improviser = { path = "../improviser" }
 mididevice = { path = "../mididevice" }
 micdevice =  { path = "../micdevice" }
 tts =  { path = "../tts" }
+config = { path = "../config" }

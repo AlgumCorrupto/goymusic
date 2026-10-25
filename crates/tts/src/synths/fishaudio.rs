@@ -1,46 +1,65 @@
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::io::{Cursor, Read};
-use super::{Audio, ParamDesc, ParamKind, Synth, Value};
+
+use config::Configurable;
+
+use super::{Audio, ParamDesc, ParamKind, Synth, Value, load_params, store_params};
 
 const MODELS: [&str; 4] = ["s1", "s2.1-pro", "s2-pro", "s2.1-pro-free"];
 
 
-// TODO: load from an init file
-/// (display name, fish.audio reference id)
-const REFERENCES: &[(&str, &str)] = &[
-    ("Dagoth Ur", "a3ac8f70fc1b4880812b5a48748c5f7c"),
-    ("Pigeon ASMR", "424d78b883cc4a068df24ab425fd1e18"),
-    ("Van Darkholme", "ac3e2eee47a1414d8e705613f7e5aca7"),
-    ("Sponge Bob", "deb5d2b89e3247918d4937d9c0864cca"),
-    ("Chief Keef", "28adaaaee1f44a0785b9880938b041b4"),
-    ("Indian", "71e5c1d4909b4c10b0fcd3194331ad58"),
-    ("Postal Dude", "bc7d31c3fddd4d06b7bc8b2962d50982"),
-    ("DJ Smokey", "8a2f5be9b42f49f0871b2f62c68ff6bb"),
-    ("OG Loc", "e160a42a23734ca8bd5f7b8d68be4f3f"),
-    ("Peter Griffin", "b1d36a18f8d84bd59dead30474cbe3d7"),
-    ("Donald J Trump", "4d5fa13d58824062a669e37665626dba"),
-    ("Alex Jones", "d596396ca9e14998bd3b6a0d3f69e707"),
-];
+type FishSynthVoices = BTreeMap<String, String>;
 
 #[derive(Clone)]
 pub struct FishSynth {
     api_key: String,
     reference_id: String, // the voice model id from fish.audio
     model: String,
+    reference_list: FishSynthVoices
 }
 
 impl Default for FishSynth {
     fn default() -> Self {
+        let mut reference_list: BTreeMap<String, String> = FishSynthVoices::new();
+        reference_list.insert("Dagoth Ur".into(), "a3ac8f70fc1b4880812b5a48748c5f7c".into());
         Self {
             api_key: std::env::var("FISH_API_KEY").unwrap_or_default(),
-            reference_id: REFERENCES[0].1.into(),
+            reference_id: reference_list.get(&String::from("Dagoth Ur")).unwrap_or(&String::default()).clone(),
             model: "s2.1-pro-free".into(),
+            reference_list
         }
+    }
+}
+
+impl Configurable for FishSynth {
+    fn load(config: &config::Config) -> Self
+    where
+        Self: Sized {  
+        let mut s = Self::default();
+
+        if let Some(list) = config.get::<FishSynthVoices>("tts.fish.references") {
+            s.reference_list = list;
+        }
+        if let Some(voice) = config.get::<String>("tts.fish.voice") {
+            match s.reference_list.get(&voice) {
+                Some(id) => s.reference_id = id.clone(),
+                None => eprintln!("config: [tts.fish].voice: unknown voice name '{voice}'"),
+            }
+        }
+
+        load_params(&mut s, config);
+        s
+    }
+
+    fn store(&self, config: &mut config::Config) {
+        store_params(self, config);
     }
 }
 
 impl Synth for FishSynth {
     fn name(&self) -> &str { "Fish Audio" }
+    fn short_name(&self) -> &str { "fish" }
 
     fn params(&self) -> Vec<ParamDesc> {
         vec![
@@ -54,7 +73,9 @@ impl Synth for FishSynth {
             ParamDesc {
                 key: "preset",
                 label: "Voice preset",
-                kind: ParamKind::Choice(REFERENCES.iter().map(|(n, _)| n.to_string()).collect()),
+                kind: ParamKind::Choice(
+                    self.reference_list.keys().cloned().collect(),
+                ),
             },
         ]
     }
@@ -65,11 +86,13 @@ impl Synth for FishSynth {
             "reference_id" => Some(Value::Text(self.reference_id.clone())),
             "model" => Some(Value::Choice(self.model.clone())),
             "preset" => {
-                let name = REFERENCES
+                let name = self
+                    .reference_list
                     .iter()
-                    .find(|(_, id)| !id.is_empty() && *id == self.reference_id)
-                    .map(|(n, _)| *n)
+                    .find(|(_, id)| !id.is_empty() && **id == self.reference_id)
+                    .map(|(name, _)| name.as_str())
                     .unwrap_or("Custom");
+
                 Some(Value::Choice(name.to_string()))
             },
             _ => None,
@@ -88,9 +111,11 @@ impl Synth for FishSynth {
                 }
             },
             ("preset", Value::Choice(name)) => {
-                match REFERENCES.iter().find(|(n, _)| *n == name) {
-                    Some((_, id)) if !id.is_empty() => self.reference_id = id.to_string(),
-                    Some(_) => {} // "Custom": keep whatever is typed
+                match self.reference_list.get(&name) {
+                    Some(id) if !id.is_empty() => {
+                        self.reference_id = id.clone();
+                    }
+                    Some(_) => {} // Empty ID: keep the custom reference ID.
                     None => return Err(format!("unknown preset: {name}")),
                 }
             },

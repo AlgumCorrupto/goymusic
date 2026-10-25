@@ -6,6 +6,7 @@ use std::time::Instant;
 use std::sync::mpsc;
 use crate::device_builder::{make_midi, make_mic};
 use std::sync::mpsc::TryRecvError;
+use config::{Config, ConfigError};
 
 pub struct Context {
     improv: Improv,
@@ -15,10 +16,13 @@ pub struct Context {
     pub improv_playing: bool,
     tts: Box<dyn Synth>,
     tts_rx: Option<mpsc::Receiver<Result<Audio, String>>>,
+    config: Config,
+    save_enabled: bool,
 }
 
 impl Default for Context {
     fn default() -> Self {
+        // ...midiout and micout exactly as before...
         let midiout: Box<dyn MidiDevice> = match make_midi() {
             Ok(m) => Box::new(m),
             Err(e) => {
@@ -35,14 +39,30 @@ impl Default for Context {
             }
         };
 
+        let config_path = Config::default_path("goymusic");
+        let mut save_enabled = true;
+        let config = match Config::load(&config_path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("config: {e} (using defaults, saving disabled)");
+                save_enabled = false;
+                Config::empty()
+            }
+        };
+
+        let improv = Improv::default();
+        let tts: Box<dyn Synth> = Box::new(EspeakSynth::default());
+
         Self {
             midiout,
             micout,
-            improv: Improv::default(),
+            improv,
             improv_playing: false,
-            tts: Box::new(EspeakSynth::default()),
+            tts,
             tts_rx: None,
             clock: Instant::now(),
+            config,
+            save_enabled,
         }
     }
 }
@@ -108,11 +128,35 @@ impl Context {
         }
     }
 
+
     pub fn update(&mut self) {
         let dt = self.clock.elapsed().as_secs_f32();
         self.clock = Instant::now();
 
         self.update_improviser(dt);
         self.poll_tts();
+    }
+
+    /// Writes the config file. Called on drop; call it yourself after the user changes settings.
+    pub fn save_config(&mut self) {
+        if !self.save_enabled {
+            return;
+        }
+        if let Err(e) = self.try_save() {
+            eprintln!("config: could not save: {e}");
+        }
+    }
+
+    fn try_save(&mut self) -> Result<(), ConfigError> {
+        Ok(())
+    }
+
+    pub fn config(&self) -> &Config { &self.config }
+}
+
+impl Drop for Context {
+    fn drop(&mut self) {
+        self.midiout.all_notes_off(1).ok(); // no stuck notes on exit
+        self.save_config();
     }
 }

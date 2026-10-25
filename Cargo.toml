@@ -8,10 +8,7 @@ members = ["crates/*"]
 resolver = "3"
 
 [dependencies]
-context = {path = "crates/context"}
 frontend = {path = "crates/frontend"}
-improviser = {path = "crates/improviser"}
-mididevice = {path = "crates/mididevice"}
 
 [profile.release]
 lto = "thin"

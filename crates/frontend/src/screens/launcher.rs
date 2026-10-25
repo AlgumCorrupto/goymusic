@@ -18,7 +18,7 @@ impl WindowSlot {
         ui: &mut egui::Ui,
         frontend: &mut Frontend,
         label: &str,
-        make: impl FnOnce() -> S,
+        make: impl FnOnce(&Frontend) -> S,
     ) {
         // Forget the window if it was closed some other way (OS X button, etc.).
         if let Some(id) = self.id {
@@ -30,14 +30,14 @@ impl WindowSlot {
         match self.id {
             None => {
                 if ui.button(format!("Open {label}")).clicked() {
-                    // None as the name: the title follows the top screen's get_name().
+                    let screen = make(frontend);          // built before the window exists
                     let id = frontend.insert_window(None);
                     if let Some(w) = frontend.window_mut(id) {
-                        w.push(make());
+                        w.push(screen);
                     }
                     self.id = Some(id);
                 }
-            }
+            },
             Some(id) => {
                 ui.horizontal(|ui| {
                     ui.label(label);

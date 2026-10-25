@@ -1,8 +1,8 @@
-use tts::synths::{all_synths, Synth};
+use context::tts::synths::{all_synths, Synth};
 use eframe::egui;
 use crate::framework::*;
 
-use tts::synths::{ParamKind, Value};
+use context::tts::synths::{ParamKind, Value};
 
 fn params_ui(ui: &mut egui::Ui, synth: &mut dyn Synth) {
     egui::Grid::new("synth_params")
@@ -54,8 +54,8 @@ pub struct TtsScreen {
 }
 
 impl TtsScreen {
-    pub fn new() -> Self {
-        Self { catalog: all_synths(), selected: 0, text: String::new() }
+    pub fn new(frontend: &Frontend) -> Self {
+        Self { catalog: all_synths(frontend.app.config()), selected: 0, text: String::new() }
     }
 }
 
