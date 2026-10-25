@@ -22,6 +22,8 @@ fn load_module(args: &[String]) -> Result<u32, Box<dyn Error>> {
 
 impl VirtualMic {
     pub fn new(name: &str) -> Result<Self, Box<dyn Error>> {
+        Self::unload_stale(name);
+        
         let sink = format!("{name}_sink");
 
         let sink_id = load_module(&[
@@ -37,6 +39,27 @@ impl VirtualMic {
         ])?;
 
         Ok(Self { sink, module_ids: vec![sink_id, src_id], current: Arc::default() })
+    }
+    fn unload_stale(name: &str) {
+        let Ok(out) = Command::new("pactl").args(["list", "short", "modules"]).output() else { return };
+        let sink_arg = format!("sink_name={name}_sink");
+        let src_arg = format!("source_name={name}");
+
+        let mut ids: Vec<String> = String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .filter_map(|line| {
+                let mut c = line.split('\t');
+                let (id, module, args) = (c.next()?, c.next()?, c.next()?);
+                let ours = (module == "module-null-sink" && args.contains(&sink_arg))
+                    || (module == "module-remap-source" && args.contains(&src_arg));
+                ours.then(|| id.to_string())
+            })
+            .collect();
+
+        ids.reverse(); // the source depends on the sink, so unload it first
+        for id in ids {
+            let _ = Command::new("pactl").args(["unload-module", &id]).status();
+        }
     }
 }
 

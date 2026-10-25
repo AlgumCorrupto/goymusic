@@ -152,6 +152,16 @@ impl Context {
     }
 
     pub fn config(&self) -> &Config { &self.config }
+
+    pub fn shutdown(&mut self) {
+        self.release_devices();
+    }
+
+    pub fn release_devices(&mut self) {
+        self.midiout = Box::new(DummyMidi::new().unwrap());
+        self.micout = Box::new(DummyMic::new().unwrap());
+    }
+
 }
 
 impl Drop for Context {

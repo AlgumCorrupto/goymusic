@@ -232,6 +232,10 @@ impl Frontend {
 
 
 impl eframe::App for Frontend {
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.app.shutdown();
+    }
+    
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.update_hotkeys();
         self.tick();
