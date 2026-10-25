@@ -189,14 +189,13 @@ impl Frontend {
     }
 
     pub fn toggle_quick_tts(&mut self) {
-        // Already open: bring it forward instead of opening a second one.
-        if let Some(id) = self.quick_tts {
+        if let Some(id) = self.quick_tts.take() {
             if self.windows.contains_key(&id) {
-                self.focus_window(id);
+                self.remove_window(id);
                 return;
             }
         }
-
+        
         let id = self.insert_window(None);
         if let Some(w) = self.windows.get_mut(&id) {
             w.style = WindowStyle {
