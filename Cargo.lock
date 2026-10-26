@@ -439,6 +439,7 @@ dependencies = [
  "improviser",
  "micdevice",
  "mididevice",
+ "text_replacer",
  "tts",
 ]
 
@@ -2947,6 +2948,14 @@ dependencies = [
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "text_replacer"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "serde",
 ]
 
 [[package]]

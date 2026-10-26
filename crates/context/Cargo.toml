@@ -9,3 +9,4 @@ mididevice = { path = "../mididevice" }
 micdevice =  { path = "../micdevice" }
 tts =  { path = "../tts" }
 config = { path = "../config" }
+text_replacer = { path = "../text_replacer" }

@@ -1,0 +1,8 @@
+[package]
+name = "text_replacer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+config = { path = "../config" }
+serde = "1.0.229"

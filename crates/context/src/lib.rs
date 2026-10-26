@@ -7,3 +7,4 @@ pub use micdevice;
 pub use mididevice;
 pub use tts;
 pub use config;
+pub use text_replacer;

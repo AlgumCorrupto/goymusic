@@ -148,7 +148,6 @@ impl Config {
     }
 
 
-
     /// Writes the file atomically (temp file + rename). On Unix it is created `0600`,
     /// since it may hold an API key.
     pub fn save(&self, path: &Path) -> Result<(), ConfigError> {

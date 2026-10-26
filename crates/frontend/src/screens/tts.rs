@@ -48,14 +48,35 @@ fn params_ui(ui: &mut egui::Ui, synth: &mut dyn Synth) {
 }
 
 pub struct TtsScreen {
-    catalog: Vec<Box<dyn Synth>>,
+    tts_synth_catalog: Vec<Box<dyn Synth>>,
     selected: usize,
     text: String,
+    text_replacement_catalog: Vec<String>,
+    selected_rule: String,
 }
+
 
 impl TtsScreen {
     pub fn new(frontend: &Frontend) -> Self {
-        Self { catalog: all_synths(frontend.app.config()), selected: 0, text: String::new() }
+        let text_replacement_catalog: Vec<String> = frontend
+            .app
+            .all_text_replacement_rules()
+            .into_iter()
+            .cloned()
+            .collect();
+
+        let selected_rule = text_replacement_catalog
+            .first()
+            .cloned()
+            .unwrap_or_default();
+
+        Self {
+            tts_synth_catalog: all_synths(frontend.app.config()),
+            selected: 0,
+            text: String::new(),
+            text_replacement_catalog,
+            selected_rule,
+        }
     }
 }
 
@@ -67,12 +88,11 @@ impl Screen for TtsScreen {
 
         // Backend picker: choosing one installs a fresh clone into Context.
         let current = app.synth().name().to_string();
-
         
         egui::ComboBox::from_id_salt("backend")
             .selected_text(&current)
             .show_ui(ui, |ui| {
-                for (i, s) in self.catalog.iter().enumerate() {
+                for (i, s) in self.tts_synth_catalog.iter().enumerate() {
                     if ui.selectable_label(s.name() == current, s.name()).clicked()
                         && s.name() != current
                     {
@@ -88,6 +108,31 @@ impl Screen for TtsScreen {
         }
         
         params_ui(ui, app.synth_mut()); // edits the live synth in Context directly
+
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut app.replacer_ative, "Text replacement");
+        
+            ui.add_enabled_ui(app.replacer_ative, |ui| {
+                egui::ComboBox::from_id_salt("text_replacement_rule")
+                    .selected_text(if self.selected_rule.is_empty() {
+                        "No rule selected"
+                    } else {
+                        &self.selected_rule
+                    })
+                    .show_ui(ui, |ui| {
+                        for rule in &self.text_replacement_catalog {
+                            ui.selectable_value(
+                                &mut self.selected_rule,
+                                rule.clone(),
+                                rule,
+                            );
+                        }
+                    });
+            });
+        
+            app.current_rule = self.selected_rule.clone();
+        });
 
         ui.separator();
 

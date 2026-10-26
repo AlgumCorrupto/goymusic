@@ -1,12 +1,13 @@
 use improviser::data::Improv;
 use mididevice::{MidiDevice, dummy::DummyMidi};
 use micdevice::{MicDevice, dummy::DummyMic};
+use text_replacer::Replacer;
 use tts::synths::{Synth, espeak::EspeakSynth, Audio};
 use std::time::Instant;
 use std::sync::mpsc;
 use crate::device_builder::{make_midi, make_mic};
 use std::sync::mpsc::TryRecvError;
-use config::{Config, ConfigError};
+use config::{Config, ConfigError, Configurable};
 
 pub struct Context {
     improv: Improv,
@@ -18,6 +19,9 @@ pub struct Context {
     tts_rx: Option<mpsc::Receiver<Result<Audio, String>>>,
     config: Config,
     save_enabled: bool,
+    text_replacer: Replacer,
+    pub current_rule: String,
+    pub replacer_ative: bool
 }
 
 impl Default for Context {
@@ -40,7 +44,7 @@ impl Default for Context {
         };
 
         let config_path = Config::default_path("goymusic");
-        let mut save_enabled = true;
+        let mut save_enabled = false;
         let config = match Config::load(&config_path) {
             Ok(c) => c,
             Err(e) => {
@@ -52,6 +56,7 @@ impl Default for Context {
 
         let improv = Improv::default();
         let tts: Box<dyn Synth> = Box::new(EspeakSynth::default());
+        let text_replacer = Replacer::load(&config);
 
         Self {
             midiout,
@@ -63,6 +68,9 @@ impl Default for Context {
             clock: Instant::now(),
             config,
             save_enabled,
+            text_replacer,
+            replacer_ative: true,
+            current_rule: String::default(),
         }
     }
 }
@@ -76,7 +84,15 @@ impl Context {
         self.tts = synth;
     }
 
-    pub fn speak(&mut self, text: String) {
+    pub fn all_text_replacement_rules(&self) -> Vec<&String> {
+        self.text_replacer.all_rules()
+    }
+
+    pub fn speak(&mut self, mut text: String) {
+        if self.replacer_ative == true {
+            text = self.text_replacer.replace(&self.current_rule, &text);
+        }
+        
         let synth = self.tts.clone_box(); // settings snapshot for the worker thread
         let (tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
