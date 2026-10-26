@@ -205,11 +205,16 @@ dependencies = []
 "c'mon" = "come on"
 "cmere" = "come here"
 "pls" = "please"
+"ge" = "good evening"
+"gm" = "good morning"
+"gn" = "good night"
+"rip" = "rest in peace"
 
 [replacer.rules.slang]
 dependencies = ["english"]
 
 [replacer.rules.slang.map]
+"btw" = "by the way"
 "boutta" = "about to"
 "af" = "as fuck"
 "asf" = "as fuck"
@@ -236,3 +241,6 @@ dependencies = ["english"]
 "lowkirk" = "lowkirkenuinely"
 "syfm" = "shut your fucking mouth"
 "ts" = "this shit"
+"wtf" = "what the fuck"
+"bbl" = "brazilian butt lift"
+"truke" = "truth nuke"
